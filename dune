@@ -1,0 +1,5 @@
+(executables
+ (names main)
+ (modules ast lexer parser codegen main)
+ (preprocess (pps menhir)))
+
