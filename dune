@@ -1,5 +1,19 @@
-(executables
- (names main)
- (modules ast lexer parser codegen main)
- (preprocess (pps menhir)))
+(library
+ (name concurrentqueue_lib)
+ (modules ast parser compile directive util lexer)
+ (libraries menhirLib)
+)
 
+(menhir
+ (modules parser)
+)
+
+(ocamllex
+ (modules lexer)
+)
+
+(executable
+ (name main)
+ (modules main)
+ (libraries concurrentqueue_lib menhirLib)
+)

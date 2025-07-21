@@ -1,22 +1,21 @@
-open Lexer
-open Parser
-open Interp
-open Directive
+(* main.ml *)
+
 
 let () =
   let filename = Sys.argv.(1) in
   let ic = open_in filename in
   let lexbuf = Lexing.from_channel ic in
   try
-    let ast = Parser.program Lexer.token lexbuf in
+    (* Fully qualified calls to Parser and Lexer *)
+    let ast = Concurrentqueue_lib.Parser.program Concurrentqueue_lib.Lexer.token lexbuf in
     close_in ic;
 
     (* Generate directive list from AST *)
-    let directives = Compile.generate_asm ast in
+    let directives = Concurrentqueue_lib.Compile.generate_asm ast in
 
     (* Convert directives to strings *)
     let asm_lines =
-      List.map (fun d -> Directive.string_of_directive ~macos:false d) directives
+      List.map (fun d -> Concurrentqueue_lib.Directive.string_of_directive ~macos:false d) directives
     in
 
     (* Build output path and open *)
@@ -31,7 +30,7 @@ let () =
     Printf.printf "Generated assembly: %s\n" output_path
 
   with
-  | Lexer.Error msg ->
+  | Concurrentqueue_lib.Lexer.Error msg ->
       Printf.eprintf "Lexing error: %s\n" msg
-  | Parser.Error ->
+  | Concurrentqueue_lib.Parser.Error ->
       Printf.eprintf "Parse error at offset %d\n" (Lexing.lexeme_start lexbuf)

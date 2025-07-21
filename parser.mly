@@ -1,17 +1,16 @@
-(* parser.mly *)
 %{
 open Ast
 %}
 
 %token <string> IDENT
 %token <int> NUMBER
-%token CONCURRENTQUEUE INT BOOL VOID AUTO RETURN IF ELSE WHILE FOR NEW
-%token ENQUEUE TRY_DEQUEUE ENQUEUE_BULK TRY_DEQUEUE_BULK
-%token SCOPE DOT LT GT LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA EQUAL AMPERSAND ASTERISK
+%token CONCURRENTQUEUE BOOL RETURN
+%token ENQUEUE TRY_DEQUEUE
+%token DOT LPAREN RPAREN SEMICOLON EQUAL
 %token EOF
 
 %start <Ast.t list> program
-%type <Ast.t list> program
+
 
 %%
 
@@ -23,25 +22,25 @@ stmts:
 | stmt SEMICOLON        { [$1] }
 
 stmt:
-| CONCURRENTQUEUE LT INT GT IDENT
-    { DeclareQueue($5) }
+| CONCURRENTQUEUE IDENT LPAREN NUMBER RPAREN
+    { Ast.DeclareQueue($2, $4) }
 
 | IDENT DOT ENQUEUE LPAREN expr RPAREN
-    { Enqueue($1, $5) }
+    { Ast.Enqueue($1, $5) }
 
-| IDENT DOT TRY_DEQUEUE LPAREN IDENT RPAREN
-    { TryDequeue($1, $5) }
+| IDENT DOT TRY_DEQUEUE LPAREN RPAREN
+    { Ast.TryDequeue($1) }
 
-| BOOL IDENT EQUAL IDENT DOT TRY_DEQUEUE LPAREN IDENT RPAREN
-    { AssignBool($2, TryDequeue($4, $7)) }
+| BOOL IDENT EQUAL IDENT DOT TRY_DEQUEUE LPAREN RPAREN
+    { Ast.AssignBool($2, Ast.TryDequeue($4)) }
 
 | RETURN expr
-    { Return($2) }
+    { Ast.Return($2) }
 
 | IDENT EQUAL expr
-    { Assign($1, $3) }
+    { Ast.Assign($1, $3) }
+
 
 expr:
 | NUMBER { IntLiteral($1) }
 | IDENT  { Var($1) }
-

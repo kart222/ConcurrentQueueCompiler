@@ -1,7 +1,7 @@
 (* directive.ml *)
 
 (** Register types used in assembly generation *)
-type register = Rax | R8 | R9 | R10 | R11 | Rsp | Rdi | Rsi | Rdx | Rbp
+type register = Rax | R8 | R9 | R10 | R11 | Rsp | Rdi | Rsi | Rdx | Rbp | Rip
 
 let string_of_register ?(byte = false) = function
   | Rax -> if byte then "al" else "rax"
@@ -14,6 +14,8 @@ let string_of_register ?(byte = false) = function
   | Rsi -> "rsi"
   | Rdx -> "rdx"
   | Rbp -> "rbp"
+  | Rip -> "rip"
+
 
 (** Operand types for assembly *)
 type operand =
