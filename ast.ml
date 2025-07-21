@@ -5,7 +5,7 @@ type expr =
   | Var of string
 
 and t =
-  | DeclareQueue of string                    (* ConcurrentQueue<int> q; *)
+  | DeclareQueue of string * int                 (* ConcurrentQueue<int> q; *)
   | Enqueue of string * expr                  (* q.enqueue(42); *)
   | TryDequeue of string * string             (* q.try_dequeue(x); *)
   | AssignBool of string * t                  (* bool ok = q.try_dequeue(x); *)
