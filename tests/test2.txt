@@ -1,0 +1,5 @@
+ConcurrentQueue q(2);
+q.enqueue(1);
+q.enqueue(2);
+q.try_dequeue();
+return 0;

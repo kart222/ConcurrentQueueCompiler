@@ -1,0 +1,5 @@
+ConcurrentQueue jobs(4);
+jobs.enqueue(99);
+bool result = jobs.try_dequeue();
+x = 5;
+return x;

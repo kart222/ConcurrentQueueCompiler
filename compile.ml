@@ -2,7 +2,6 @@ open Ast
 open Directive
 open Util
 
-(* Align stack index for 16-byte ABI alignment *)
 let align_stack_index : int -> int =
   fun stack_index ->
     if stack_index mod 16 = -8 then
@@ -10,8 +9,6 @@ let align_stack_index : int -> int =
     else
       stack_index - 8
 
-
-(* Helper to get stack address relative to RSP *)
 let stack_address : int -> operand =
   fun index ->
     MemOffset (Imm index, Reg Rsp)
@@ -23,8 +20,6 @@ let emit_expr (expr : expr) : directive list * operand =
       [], Imm n
   | Var _ -> 
       [], Reg Rax  
-
-
 
 let emit_stmt (stmt : t) : directive list =
   match stmt with
@@ -55,35 +50,54 @@ let emit_stmt (stmt : t) : directive list =
       ]
 
   (* Enqueue: insert element at tail *)
-  | Enqueue (qname, expr) ->
-      let expr_code, expr_op = emit_expr expr in
-      let end_label = gensym (qname ^ "_enqueue_end") in
-      expr_code @ [
+| Enqueue (qname, expr) ->
+    let expr_code, expr_op = emit_expr expr in
+    let end_label = gensym (qname ^ "_enqueue_end") in
+    let full_label = gensym (qname ^ "_enqueue_full") in
+    expr_code @ [
 
-        (* Calculate address: buffer_base (R8) + tail (R11) * 8 *)
-        Mov (Reg Rax, Reg R11);
-        Shl (Reg Rax, Imm 3);
-        Add (Reg Rax, Reg R8);
+      (* Calculate slots = (buffer_end - buffer_base) / 8 *)
+      Mov (Reg Rdx, Reg R9);
+      Sub (Reg Rdx, Reg R8);
+      Sar (Reg Rdx, Imm 3);  (* Rdx = slots *)
 
-        (* Store value at buffer[tail] *)
-        Mov (MemOffset (Reg Rax, Imm 0), expr_op);
+      (* Calculate next_tail = (tail + 1) % slots *)
+      Mov (Reg Rax, Reg R11);
+      Add (Reg Rax, Imm 1);
+      Cmp (Reg Rax, Reg Rdx);
+      Jl (full_label ^ "_continue");
+      Mov (Reg Rax, Imm 0);
+      Label (full_label ^ "_continue");
 
-        (* Increment tail *)
-        Add (Reg R11, Imm 1);
+      (* Check if next_tail == head *)
+      Cmp (Reg Rax, Reg R10);
+      Je full_label;
 
-        (* Calculate slots = (buffer_end - buffer_base) / 8 *)
-        Mov (Reg Rdx, Reg R9);
-        Sub (Reg Rdx, Reg R8);
-        Sar (Reg Rdx, Imm 3);
+      (* Proceed with enqueue *)
 
-        (* Wrap tail to zero if needed *)
-        Cmp (Reg R11, Reg Rdx);
-        Jne end_label;
+      (* Calculate address: buffer_base (R8) + tail (R11) * 8 *)
+      Mov (Reg Rax, Reg R11);
+      Shl (Reg Rax, Imm 3);
+      Add (Reg Rax, Reg R8);
 
-        Mov (Reg R11, Imm 0);
+      (* Store value at buffer[tail] *)
+      Mov (MemOffset (Reg Rax, Imm 0), expr_op);
 
-        Label end_label;
-      ]
+      (* Increment tail *)
+      Add (Reg R11, Imm 1);
+
+      (* Wrap tail to zero if needed *)
+      Cmp (Reg R11, Reg Rdx);
+      Jne end_label;
+      Mov (Reg R11, Imm 0);
+
+      Label end_label;
+
+      (* Handle full queue *)
+      Label full_label;
+      Jmp "error";
+    ]
+
 
   (* TryDequeue: attempt to dequeue, load value into Rsi, jump if empty *)
   | TryDequeue (qname) ->
@@ -118,8 +132,8 @@ let emit_stmt (stmt : t) : directive list =
 
         Label done_label;
 
-        (* Empty label for queue empty *)
         Label empty_label;
+        Jmp "error";
       ]
 
   (* Assign: assign value to variable (placeholder using Rax) *)
@@ -170,11 +184,7 @@ let emit_stmt (stmt : t) : directive list =
         Jmp done_label;
 
         Label empty_label;
-
-        (* Store false in Rax *)
-        Mov (Reg Rax, Imm 0);
-
-        Label done_label;
+        Jmp "error";
       ]
 
   | AssignBool _ ->
